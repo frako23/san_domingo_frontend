@@ -1,0 +1,28 @@
+{
+  // 🔧 Volar: reemplaza Vetur y mejora el soporte de Vue 3 + TypeScript
+  "volar.takeOverMode.enabled": true,
+
+  // 🚫 Desactiva Vetur si lo tienes instalado
+  "vetur.validation.template": false,
+  "vetur.validation.script": false,
+  "vetur.validation.style": false,
+
+  // 💡 ErrorLens: muestra errores inline
+  "errorLens.enabled": true,
+  "errorLens.fontWeight": "bold",
+  "errorLens.gutterIconsEnabled": true,
+  "errorLens.errorColor": "#ff6b6b",
+  "errorLens.warningColor": "#f4a261",
+  "errorLens.infoColor": "#2a9d8f",
+  "errorLens.hintColor": "#8ecae6",
+  "errorLens.messageTemplate": "💥 {message}",
+
+  // 🧼 Opcional: Prettier para formateo consistente
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+
+  // 📦 ESLint para linting en Vue + TypeScript
+  "eslint.validate": ["javascript", "typescript", "vue"]
+}
