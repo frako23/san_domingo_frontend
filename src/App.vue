@@ -242,6 +242,7 @@ const closeConfirmation = () => {
 onMounted(() => {
   // Primero, se intenta cargar el usuario desde localStorage
   const userStr = localStorage.getItem('user')
+  console.log("Usuario en localStorage:", userStr)
   if (userStr) {
     try {
       const storedUser = JSON.parse(userStr)
@@ -264,6 +265,8 @@ onMounted(() => {
         if (decodedUser.hd === "atenasconsultores.com") {
           localStorage.setItem('user', JSON.stringify(decodedUser))
           userData.value = decodedUser
+          console.log("Usuario autenticado:", decodedUser);
+
           currentScreen.value = 'selector'
         } else {
           alert("Por favor, utiliza una cuenta de Atenas Consultores")
