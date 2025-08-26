@@ -151,6 +151,7 @@ import { decodeCredential, googleOneTap } from 'vue3-google-login'
 
 const currentScreen = ref('home')
 const userData = ref(null)
+console.log("userData inicial:", userData.value);
 
 const coffeeTypes = [
   // ... (el array de tipos de café es el mismo) ...
@@ -192,11 +193,7 @@ const selectedCoffeeData = computed(() => {
   return coffeeTypes.find(coffee => coffee.id === selectedCoffee.value) || {}
 })
 
-// Corregido: userFullName se declara como una computed global y reactiva
-const userFullName = computed(() => {
-  if (!userData.value) return ''
-  return `${userData.value.given_name || ''} ${userData.value.family_name || ''}`.trim()
-})
+
 
 const goToCoffeeSelector = () => {
   // Se añade la verificación de usuario para evitar que se entre sin autenticación
@@ -239,43 +236,118 @@ const closeConfirmation = () => {
   quantity.value = 1
 }
 
+const userFullName = computed(() => {
+  if (!userData.value) return ''
+  return `${userData.value.given_name || ''} ${userData.value.family_name || ''}`.trim()
+})
+
+// Esta es la nueva función que encapsula la lógica de la API
+async function sendTokenToApi(idToken) {
+  try {
+    const response = await fetch('http://localhost:8000/api/v1/login/google', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ id_token: idToken })
+    });
+
+    // Si la respuesta no es OK, lanza un error
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Error al autenticar con la API');
+    }
+
+    const data = await response.json();
+    console.log("Respuesta de la API:", data);
+
+    // Aquí puedes manejar la respuesta de tu API, por ejemplo,
+    // guardando un token de sesión propio si lo generas.
+
+  } catch (err) {
+    console.error("Error al enviar el token a la API:", err);
+    // Muestra un mensaje de error al usuario
+    alert("Hubo un problema al iniciar sesión. Inténtalo de nuevo.");
+  }
+}
+console.log(userFullName);
+
+// Esta es la nueva función que registra a los usuarios en el sistema
+async function createUser(name, lastname, email) {
+  try {
+    const response = await fetch('http://localhost:8000/create_user/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name,
+        lastname,
+        email
+      })
+    });
+
+    // Si la respuesta no es OK, lanza un error
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Error alregistrar el usuario');
+    }
+
+    const data = await response.json();
+    console.log("Respuesta de la API:", data);
+
+    // Aquí puedes manejar la respuesta de tu API, por ejemplo,
+    // guardando un token de sesión propio si lo generas.
+
+  } catch (err) {
+    console.error("Error al enviar el token a la API:", JSON.stringify(err, null, 2));
+    // Muestra un mensaje de error al usuario
+    alert("Hubo un problema al iniciar sesión. Inténtalo de nuevo.");
+  }
+}
+
 onMounted(() => {
-  // Primero, se intenta cargar el usuario desde localStorage
-  const userStr = localStorage.getItem('user')
-  console.log("Usuario en localStorage:", userStr)
+  const userStr = localStorage.getItem('user');
   if (userStr) {
     try {
-      const storedUser = JSON.parse(userStr)
+      const storedUser = JSON.parse(userStr);
       if (storedUser.hd === "atenasconsultores.com") {
-        userData.value = storedUser
-        // Si el usuario ya está autenticado, se le redirige al selector
-        currentScreen.value = 'selector'
+        userData.value = storedUser;
+        currentScreen.value = 'selector';
       }
     } catch (e) {
-      console.error("Error al parsear el usuario de localStorage:", e)
-      localStorage.removeItem('user') // Limpiar datos corruptos
+      console.error("Error al parsear el usuario de localStorage:", e);
+      localStorage.removeItem('user');
     }
   }
 
-  // Si no hay un usuario válido, se procede con Google One Tap
   if (!userData.value) {
     googleOneTap({ autoLogin: true })
       .then((response) => {
-        const decodedUser = decodeCredential(response.credential)
+        // Obtenemos el ID Token
+        const idToken = response.credential;
+
+        // Decodificamos el usuario del token para la lógica de negocio
+        const decodedUser = decodeCredential(idToken);
+
         if (decodedUser.hd === "atenasconsultores.com") {
-          localStorage.setItem('user', JSON.stringify(decodedUser))
-          userData.value = decodedUser
+          localStorage.setItem('user', JSON.stringify(decodedUser));
+          userData.value = decodedUser;
           console.log("Usuario autenticado:", decodedUser);
 
-          currentScreen.value = 'selector'
+          currentScreen.value = 'selector';
+
+          // ¡Aquí es donde llamas a la función para enviar el token a la API!
+          sendTokenToApi(idToken);
+
+          createUser(decodedUser.given_name, decodedUser.family_name, decodedUser.email);
         } else {
-          alert("Por favor, utiliza una cuenta de Atenas Consultores")
+          alert("Por favor, utiliza una cuenta de Atenas Consultores");
         }
       })
       .catch((error) => {
-        console.log("Error en Google One Tap:", error)
-        // Opcional: Manejar el caso en que el usuario no quiere iniciar sesión
-      })
+        console.log("Error en Google One Tap:", error);
+      });
   }
 })
 </script>
