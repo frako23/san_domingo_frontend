@@ -37,11 +37,11 @@
 
     <div v-if="currentScreen === 'selector'" class="p-4">
       <div class="max-w-4xl mx-auto">
-        <div class="flex items-center justify-between mb-8">
-          <button @click="goToHome"
-            class="flex items-center space-x-2 text-amber-700 hover:text-amber-800 transition-colors">
+        <div class="items-center justify-between mb-8">
+          <div class="flex justify-between items-center my-2.5 w-full">
             <span class="text-3xl font-semibold">{{ userFullName }}</span>
-          </button>
+            <div>Cafés=</div>
+          </div>
           <div class="text-center flex-1">
             <h1 class="text-3xl md:text-4xl font-bold text-amber-900 mb-2">
               Café San Domingo
@@ -52,7 +52,7 @@
           </div>
           <div class="w-24"></div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div v-for="coffee in coffeeTypes" :key="coffee.id" @click="selectCoffee(coffee.id)" :class="[
             'bg-white rounded-xl shadow-lg p-6 cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105',
             selectedCoffee === coffee.id ? 'ring-4 ring-amber-500 bg-amber-50' : ''
@@ -65,9 +65,6 @@
               <p class="text-gray-600 text-sm mb-4">
                 {{ coffee.description }}
               </p>
-              <div class="text-2xl font-bold text-amber-600">
-                ${{ coffee.price }}
-              </div>
             </div>
           </div>
         </div>
@@ -148,42 +145,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { decodeCredential, googleOneTap } from 'vue3-google-login'
+import { createUser, get_current_user_data, sendTokenToApi } from './utils/functions';
+import { coffeeTypes } from './utils/data';
 
 const currentScreen = ref('home')
 const userData = ref(null)
 console.log("userData inicial:", userData.value);
 
-const coffeeTypes = [
-  // ... (el array de tipos de café es el mismo) ...
-  {
-    id: 'vainilla',
-    name: 'Vainilla',
-    description: 'Suave y aromático con notas dulces de vainilla',
-    price: 4.50,
-    emoji: '🍦'
-  },
-  {
-    id: 'chocolate',
-    name: 'Chocolate',
-    description: 'Rico y cremoso con intenso sabor a chocolate',
-    price: 5.00,
-    emoji: '🍫'
-  },
-  {
-    id: 'galleta',
-    name: 'Galleta',
-    description: 'Delicioso con sabor a galletas recién horneadas',
-    price: 4.75,
-    emoji: '🍪'
-  },
-  {
-    id: 'avellana',
-    name: 'Avellana',
-    description: 'Tostado y nutritivo con esencia de avellanas',
-    price: 5.25,
-    emoji: '🌰'
-  }
-]
+
 
 const selectedCoffee = ref(null)
 const quantity = ref(1)
@@ -241,70 +210,7 @@ const userFullName = computed(() => {
   return `${userData.value.given_name || ''} ${userData.value.family_name || ''}`.trim()
 })
 
-// Esta es la nueva función que encapsula la lógica de la API
-async function sendTokenToApi(idToken) {
-  try {
-    const response = await fetch('http://localhost:8000/api/v1/login/google', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ id_token: idToken })
-    });
 
-    // Si la respuesta no es OK, lanza un error
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Error al autenticar con la API');
-    }
-
-    const data = await response.json();
-    console.log("Respuesta de la API:", data);
-
-    // Aquí puedes manejar la respuesta de tu API, por ejemplo,
-    // guardando un token de sesión propio si lo generas.
-
-  } catch (err) {
-    console.error("Error al enviar el token a la API:", err);
-    // Muestra un mensaje de error al usuario
-    alert("Hubo un problema al iniciar sesión. Inténtalo de nuevo.");
-  }
-}
-console.log(userFullName);
-
-// Esta es la nueva función que registra a los usuarios en el sistema
-async function createUser(name, lastname, email) {
-  try {
-    const response = await fetch('http://localhost:8000/create_user/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name,
-        lastname,
-        email
-      })
-    });
-
-    // Si la respuesta no es OK, lanza un error
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Error alregistrar el usuario');
-    }
-
-    const data = await response.json();
-    console.log("Respuesta de la API:", data);
-
-    // Aquí puedes manejar la respuesta de tu API, por ejemplo,
-    // guardando un token de sesión propio si lo generas.
-
-  } catch (err) {
-    console.error("Error al enviar el token a la API:", JSON.stringify(err, null, 2));
-    // Muestra un mensaje de error al usuario
-    alert("Hubo un problema al iniciar sesión. Inténtalo de nuevo.");
-  }
-}
 
 onMounted(() => {
   const userStr = localStorage.getItem('user');
@@ -348,6 +254,12 @@ onMounted(() => {
       .catch((error) => {
         console.log("Error en Google One Tap:", error);
       });
+  } else {
+    googleOneTap({ autoLogin: true })
+      .then((response) => {
+        const idToken = response.credential;
+        get_current_user_data(idToken)
+      })
   }
 })
 </script>
